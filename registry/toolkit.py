@@ -195,11 +195,26 @@ def parse_content_signature(s):
     return ret
 
 
+def check_basic_auth():
+    cfg = config.load()
+    if not cfg.basic_auth:
+        return True
+
+    auth = flask.request.authorization
+
+    return (
+        auth and auth.type == 'basic' and
+        cfg.basic_auth['username'] == auth.username and
+        cfg.basic_auth['password'] == auth.password
+    )
+
+
 def requires_auth(f):
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        if check_signature() is True or check_session() is True \
-                or check_token(kwargs) is True:
+        if check_basic_auth() is True and (check_signature() is True
+                                           or check_session() is True
+                                           or check_token(kwargs) is True):
             return f(*args, **kwargs)
         headers = {'WWW-Authenticate': 'Token'}
         return api_error('Requires authorization', 401, headers)
